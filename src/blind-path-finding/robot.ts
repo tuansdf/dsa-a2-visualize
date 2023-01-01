@@ -2,7 +2,7 @@ import Branch from "/src/blind-path-finding/branch";
 import Maze, { Cell, Direction, Signal } from "/src/blind-path-finding/maze";
 import Stack from "/src/blind-path-finding/stack";
 
-const VIRT_HALF = 5;
+const VIRT_HALF = 100;
 const VIRT_FULL = VIRT_HALF * 2;
 
 export default class Robot {
@@ -12,7 +12,7 @@ export default class Robot {
 
   private maze: Maze;
 
-  constructor() {
+  constructor(maze: Maze) {
     // initialize the virtual map for robot
     this.virtualMap = new Array(VIRT_FULL);
     for (let i = 0; i < VIRT_FULL; i++) {
@@ -31,7 +31,7 @@ export default class Robot {
       Cell.PATH
     );
 
-    this.maze = new Maze();
+    this.maze = maze;
   }
 
   public navigate() {
@@ -100,11 +100,6 @@ export default class Robot {
         this.virtualCurrentCol,
         Cell.WIN
       );
-    }
-
-    // write the map into a separate file
-    for (const row of this.virtualMap) {
-      console.log(row);
     }
   }
 

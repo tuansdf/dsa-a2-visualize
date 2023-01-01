@@ -23,27 +23,28 @@ export enum Cell {
 export default class Maze {
   private rows: number;
   private cols: number;
-  private map: string[];
-  private mapPublic: Cell[][];
+  private map: Cell[][];
+  private _mapPublic: Cell[][];
   private robotRow: number;
   private robotCol: number;
-  private steps: number;
+  private _steps: number;
 
-  constructor() {
-    this.rows = 1000;
-    this.cols = 1000;
-    this.map = new Array(5);
-
-    this.map[0] = "...............";
-    this.map[1] = ".        .    .";
-    this.map[2] = ".        .    .";
-    this.map[3] = ".             .";
-    this.map[4] = "...............";
+  constructor(map: Cell[][], robotRow: number, robotCol: number) {
+    this.map = map;
+    this._mapPublic = JSON.parse(JSON.stringify(this.map));
+    this._mapPublic[robotRow][robotCol] = Cell.ROBOT;
 
     // robot position
-    this.robotRow = 1;
-    this.robotCol = 3;
-    this.steps = 0;
+    this.robotRow = robotRow;
+    this.robotCol = robotCol;
+    this._steps = 0;
+  }
+
+  get mapPublic() {
+    return this._mapPublic;
+  }
+  get steps() {
+    return this._steps;
   }
 
   public go(direction: Direction): Signal {
@@ -63,17 +64,21 @@ export default class Maze {
     // check the next position
     if (this.map[currentRow][currentCol] === Cell.GATE) {
       // Exit gate
-      this.steps++;
+      this._steps++;
+      this._mapPublic[currentRow][currentCol] = Cell.GATE;
+      // for (const row of this.mapPublic) console.log(row);
       return Signal.WIN;
-    } else if (this.map[currentRow].charAt(currentCol) === Cell.WALL) {
+    } else if (this.map[currentRow][currentCol] === Cell.WALL) {
       // Wall
-      this.steps++;
+      this._steps++;
+      this._mapPublic[currentRow][currentCol] = Cell.WALL;
       return Signal.FALSE;
     } else {
       // Space => update robot location
-      this.steps++;
+      this._steps++;
       this.robotRow = currentRow;
       this.robotCol = currentCol;
+      this._mapPublic[currentRow][currentCol] = Cell.PATH;
       return Signal.TRUE;
     }
   }
