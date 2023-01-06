@@ -9,7 +9,11 @@ const VIRT_FULL = VIRT_HALF * 2;
 
 interface GoOptions {
   // every time robot move
-  afterEachMove?: (direction: Direction, cell: Cell) => Promise<void> | void;
+  afterEachMove?: (
+    direction: Direction,
+    cell: Cell,
+    signal?: Signal
+  ) => Promise<void> | void;
   // move or hit the wall
   afterEachHit?: () => Promise<void> | void;
 }
@@ -93,7 +97,11 @@ export default class Robot {
       }
       // if there is no obstacle, end that branch
       else {
-        await goOptions?.afterEachMove?.(currentDirection, Cell.PATH);
+        await goOptions?.afterEachMove?.(
+          currentDirection,
+          Cell.PATH,
+          currentSignal
+        );
 
         currentBranch.end = true;
         this.forkBranch(branches, currentDirection);

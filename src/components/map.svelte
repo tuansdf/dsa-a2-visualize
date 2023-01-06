@@ -6,7 +6,7 @@
   export let map: Cell[][];
 </script>
 
-<div class="grid gap-[1px] mt-16">
+<div class="grid gap-[1px]">
   {#each map as row, i}
     <div class="flex border-collapse gap-[1px]">
       {#each row as cell, j}
