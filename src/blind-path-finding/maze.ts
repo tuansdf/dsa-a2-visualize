@@ -1,13 +1,11 @@
-import { getDirectionDiff } from "/src/blind-path-finding/helpers";
-import { Cell, Direction, Signal } from "/src/blind-path-finding/types";
+import { getDirectionDiff } from "./helpers";
+import { Cell, Direction, Signal } from "./types";
 
 export default class Maze {
-  private rows: number;
-  private cols: number;
   private map: Cell[][];
   private robotRow: number;
   private robotCol: number;
-  private _steps: number;
+  private steps: number;
 
   constructor(map: Cell[][], robotRow: number, robotCol: number) {
     this.map = map;
@@ -15,11 +13,11 @@ export default class Maze {
     // robot position
     this.robotRow = robotRow;
     this.robotCol = robotCol;
-    this._steps = 0;
+    this.steps = 0;
   }
 
-  get steps() {
-    return this._steps;
+  public getSteps() {
+    return this.steps;
   }
 
   public go(direction: Direction): Signal {
@@ -33,15 +31,15 @@ export default class Maze {
     // check the next position
     if (this.map[currentRow][currentCol] === Cell.GATE) {
       // Exit gate
-      this._steps++;
+      this.steps++;
       return Signal.WIN;
     } else if (this.map[currentRow][currentCol] === Cell.WALL) {
       // Wall
-      this._steps++;
+      this.steps++;
       return Signal.FALSE;
     } else {
       // Space => update robot location
-      this._steps++;
+      this.steps++;
       this.robotRow = currentRow;
       this.robotCol = currentCol;
       return Signal.TRUE;

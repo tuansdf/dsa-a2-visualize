@@ -1,4 +1,4 @@
-import { Direction } from "/src/blind-path-finding/types";
+import { Direction } from "./types";
 
 export function getOppositeDirection(direction: Direction): Direction {
   switch (direction) {

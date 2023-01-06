@@ -1,16 +1,18 @@
 import Branch from "./branch";
+import { getDirectionDiff, getOppositeDirection } from "./helpers";
 import type Maze from "./maze";
 import Stack from "./stack";
 import { Cell, Direction, Signal } from "./types";
-import {
-  getDirectionDiff,
-  getOppositeDirection,
-} from "/src/blind-path-finding/helpers";
 
 const VIRT_HALF = 100;
 const VIRT_FULL = VIRT_HALF * 2;
 
-type goFunc = (direction: Direction, cell: Cell) => Promise<void>;
+interface GoOptions {
+  // every time robot move
+  afterEachMove?: (direction: Direction, cell: Cell) => Promise<void> | void;
+  // move or hit the wall
+  afterEachHit?: () => Promise<void> | void;
+}
 
 export default class Robot {
   private virtualMap: Cell[][];
@@ -41,9 +43,7 @@ export default class Robot {
     this.maze = maze;
   }
 
-  public async navigate(afterEachGo?: goFunc) {
-    const startTime: number = performance.now();
-
+  public async navigate(goOptions?: GoOptions) {
     const branches: Stack<Branch> = new Stack<Branch>();
 
     // register all four directions into the wait-list
@@ -68,9 +68,11 @@ export default class Robot {
       // back-track to the previous branch and terminate the current branch
       if (currentBranch.end) {
         // back-track to the previous branch
-        this.adapterGo(getOppositeDirection(currentDirection));
+        const opposite = getOppositeDirection(currentDirection);
+        this.adapterGo(opposite);
 
-        await afterEachGo(getOppositeDirection(currentDirection), Cell.CROSS);
+        await goOptions?.afterEachMove?.(opposite, Cell.CROSS);
+        await goOptions?.afterEachHit?.();
 
         branches.pop();
         continue;
@@ -82,6 +84,7 @@ export default class Robot {
       // advance to the next cell
       if (currentSignal === Signal.TRUE) {
         currentSignal = this.adapterGo(currentDirection);
+        await goOptions?.afterEachHit?.();
       }
 
       // if there is an obstacle, remove that branch
@@ -90,28 +93,11 @@ export default class Robot {
       }
       // if there is no obstacle, end that branch
       else {
-        await afterEachGo(currentDirection, Cell.PATH);
+        await goOptions?.afterEachMove?.(currentDirection, Cell.PATH);
 
         currentBranch.end = true;
         this.forkBranch(branches, currentDirection);
       }
-    }
-
-    // * --- *
-    // stats for testing only
-    const endTime: number = performance.now();
-    const elapsedTime: number = endTime - startTime;
-
-    console.log(`Elapsed time: ${elapsedTime} ms`);
-    // mark the robot
-    this.replaceCellAt(VIRT_HALF, VIRT_HALF, Cell.ROBOT);
-    // mark the gate
-    if (currentSignal === Signal.WIN) {
-      this.replaceCellAt(
-        this.virtualCurrentRow,
-        this.virtualCurrentCol,
-        Cell.WIN
-      );
     }
   }
 

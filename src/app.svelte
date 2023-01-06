@@ -3,10 +3,10 @@
     getDirectionDiff,
     getOppositeDirection,
   } from "/src/blind-path-finding/helpers";
-
   import Maze from "/src/blind-path-finding/maze";
   import Robot from "/src/blind-path-finding/robot";
   import { Cell, Direction } from "/src/blind-path-finding/types";
+
   import Button from "/src/components/button.svelte";
   import Map from "/src/components/map.svelte";
   import Select from "/src/components/select.svelte";
@@ -138,29 +138,33 @@
   const start = () => {
     if (started) {
       started = false;
+      steps = 0;
       resetMap(mapRows, mapCols);
     } else {
       started = true;
       const maze = new Maze(map, robotRow, robotCol);
-      new Robot(maze).navigate(async (direction: Direction, cell: Cell) => {
-        if (currentDirection === getOppositeDirection(direction)) {
+      new Robot(maze).navigate({
+        afterEachMove: async (direction: Direction, cell: Cell) => {
+          if (currentDirection === getOppositeDirection(direction)) {
+            map[robotRow][robotCol] = cell;
+          }
+          currentDirection = direction;
+          const [row, col] = getDirectionDiff(direction);
+          robotCol += col;
+          robotRow += row;
           map[robotRow][robotCol] = cell;
-        }
-        currentDirection = direction;
-        const [row, col] = getDirectionDiff(direction);
-        robotCol += col;
-        robotRow += row;
-        map[robotRow][robotCol] = cell;
-        steps++;
-        await delay(wait);
+          await delay(wait);
+        },
+        afterEachHit: () => {
+          steps++;
+        },
       });
     }
   };
 </script>
 
-<main
-  class="min-h-screen flex gap-16 bg-neutral-100 justify-start items-center"
->
+<main class="min-h-screen flex gap-16 justify-start items-center">
+  <!-- controll board -->
   <div class="flex-none space-y-6 ml-16 w-40">
     <div class="space-y-4">
       <div class="flex gap-4">
@@ -195,6 +199,11 @@
       Steps: {steps}
     </div>
     <Button on:click={start}>{started ? "Reset" : "Start"}</Button>
+    {#if started}
+      <div class="text-red-500">
+        Please refresh the page to reset in the middle of the run
+      </div>
+    {/if}
   </div>
 
   <div class="flex-1 flex justify-center items-center">
