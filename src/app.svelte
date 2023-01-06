@@ -1,5 +1,4 @@
 <script lang="ts">
-  import clsx from "clsx";
   import {
     getDirectionDiff,
     getOppositeDirection,
@@ -10,23 +9,52 @@
   import { Cell, Direction } from "/src/blind-path-finding/types";
   import Button from "/src/components/button.svelte";
   import Map from "/src/components/map.svelte";
+  import Select from "/src/components/select.svelte";
 
-  const MAX_ROWS = 30;
-  const MAX_COLS = 60;
-  const MIN_ROWS = 5;
-  const MIN_COLS = 5;
+  const rowOptions = [10, 20, 30];
+  const colOptions = [10, 20, 30, 40, 50];
+  const timeOptions = [
+    {
+      label: "Very Fast",
+      value: 1,
+    },
+    {
+      label: "Fast",
+      value: 10,
+    },
+    {
+      label: "Slow",
+      value: 20,
+    },
+    {
+      label: "Very Slow",
+      value: 40,
+    },
+  ];
+  const paintOptions = [
+    {
+      label: "Wall",
+      value: Cell.WALL,
+    },
+    {
+      label: "Gate",
+      value: Cell.GATE,
+    },
+    {
+      label: "Robot",
+      value: Cell.ROBOT,
+    },
+  ];
 
-  let wait = 10;
-
-  let mapRows = 30;
-  let mapCols = 60;
+  let wait: number = timeOptions[timeOptions.length - 1].value;
+  let mapRows: number = rowOptions[rowOptions.length - 1];
+  let mapCols: number = colOptions[colOptions.length - 1];
+  let paintType: Cell = Cell.WALL;
 
   let robotRow = 1;
   let robotCol = 1;
 
   let robotExist = true;
-
-  let paintType: Cell = Cell.WALL;
 
   let started = false;
 
@@ -39,8 +67,8 @@
   $: resetMap(mapRows, mapCols);
 
   const resetMap = (createRows: number, createCols: number) => {
-    const rows = createRows || MIN_ROWS;
-    const cols = createCols || MIN_COLS;
+    const rows = createRows;
+    const cols = createCols;
 
     const tmp: Cell[][] = new Array(rows);
 
@@ -130,66 +158,46 @@
   };
 </script>
 
-<main class="min-h-screen flex gap-8 bg-neutral-100 justify-start items-center">
-  <div class="gap-8 items-center mb-4 ml-16">
-    <div class="">
-      Steps: {steps}
-      <div>
-        <label for="rows">Rows (max: {MAX_ROWS})</label>
-        <br />
-        <input
-          type="number"
-          id="rows"
-          max={MAX_ROWS}
-          min={MIN_COLS}
-          class="w-32 p-1.5 border-rose-500 border-2 rounded"
+<main
+  class="min-h-screen flex gap-16 bg-neutral-100 justify-start items-center"
+>
+  <div class="flex-none space-y-6 ml-16 w-40">
+    <div class="space-y-4">
+      <div class="flex gap-4">
+        <Select
+          id="row"
+          label="Rows"
           bind:value={mapRows}
+          options={rowOptions}
         />
-      </div>
-      <div>
-        <label for="cols">Cols: (max: {MAX_COLS})</label>
-        <br />
-        <input
-          type="number"
-          id="cols"
-          max={MAX_COLS}
-          min={MIN_COLS}
-          class="w-32 p-1.5 border-rose-500 border-2 rounded"
+        <Select
+          id="col"
+          label="Cols"
           bind:value={mapCols}
+          options={colOptions}
         />
       </div>
-      <div>
-        <label for="cols">Time</label>
-        <br />
-        <input
-          type="number"
-          id="cols"
-          class="w-32 p-1.5 border-rose-500 border-2 rounded"
-          bind:value={wait}
-        />
-      </div>
-    </div>
-    <div class="flex flex-col gap-2">
-      <Button on:click={() => (paintType = Cell.WALL)}>Wall</Button>
-      <Button on:click={() => (paintType = Cell.GATE)}>Gate</Button>
-      <Button on:click={() => (paintType = Cell.ROBOT)}>Robot</Button>
-    </div>
-    <div class="flex gap-2">
-      Active:
-      <div
-        class={clsx(
-          {
-            "bg-red-300": paintType === Cell.WALL,
-            "bg-blue-300": paintType === Cell.GATE,
-            "bg-green-400": paintType === Cell.ROBOT,
-          },
-          "border rounded-sm border-black w-6 h-6"
-        )}
+      <Select
+        id="paint"
+        label="Paint"
+        bind:value={paintType}
+        options={paintOptions}
+      />
+      <Select
+        id="speed"
+        label="Speed"
+        bind:value={wait}
+        options={timeOptions}
       />
     </div>
 
+    <div>
+      Steps: {steps}
+    </div>
     <Button on:click={start}>{started ? "Reset" : "Start"}</Button>
   </div>
 
-  <Map {map} {paintMap} />
+  <div class="flex-1 flex justify-center items-center">
+    <Map {map} {paintMap} />
+  </div>
 </main>
