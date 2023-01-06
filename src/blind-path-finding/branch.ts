@@ -1,4 +1,4 @@
-import type { Direction } from "/src/blind-path-finding/maze";
+import type { Direction } from "./types";
 
 export default class Branch {
   private _direction: Direction;

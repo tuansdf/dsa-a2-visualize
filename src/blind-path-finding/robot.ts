@@ -1,9 +1,12 @@
-import Branch from "/src/blind-path-finding/branch";
-import Maze, { Cell, Direction, Signal } from "/src/blind-path-finding/maze";
-import Stack from "/src/blind-path-finding/stack";
+import Branch from "./branch";
+import type Maze from "./maze";
+import Stack from "./stack";
+import { Cell, Direction, Signal } from "./types";
 
 const VIRT_HALF = 100;
 const VIRT_FULL = VIRT_HALF * 2;
+
+type goFunc = (direction: Direction, cell: Cell) => Promise<void>;
 
 export default class Robot {
   private virtualMap: Cell[][];
@@ -34,7 +37,7 @@ export default class Robot {
     this.maze = maze;
   }
 
-  public navigate() {
+  public async navigate(afterEachGo?: goFunc) {
     const startTime: number = performance.now();
 
     const branches: Stack<Branch> = new Stack<Branch>();
@@ -47,9 +50,9 @@ export default class Robot {
 
     let currentBranch: Branch;
     let currentDirection: Direction;
-    let currentResult: Signal;
+    let currentSignal: Signal;
 
-    while (currentResult !== Signal.WIN) {
+    while (currentSignal !== Signal.WIN) {
       // always get the direction from the top of the stack in every loop
       currentBranch = branches.peek();
       if (currentBranch == null) {
@@ -62,24 +65,33 @@ export default class Robot {
       if (currentBranch.end) {
         // back-track to the previous branch
         this.adapterGo(this.getOppositeDirection(currentDirection));
+
+        await afterEachGo(
+          this.getOppositeDirection(currentDirection),
+          Cell.CROSS
+        );
+
         branches.pop();
+
         continue;
       }
 
       // check the next cell and consider own path as obstacle
-      currentResult = this.virtualCheck(currentDirection, false);
+      currentSignal = this.virtualCheck(currentDirection, false);
       // only when the virtual map does not have record of such obstacle,
       // advance to the next cell
-      if (currentResult === Signal.TRUE) {
-        currentResult = this.adapterGo(currentDirection);
+      if (currentSignal === Signal.TRUE) {
+        currentSignal = this.adapterGo(currentDirection);
       }
 
       // if there is an obstacle, remove that branch
-      if (currentResult === Signal.FALSE) {
+      if (currentSignal === Signal.FALSE) {
         branches.pop();
       }
       // if there is no obstacle, end that branch
       else {
+        await afterEachGo(currentDirection, Cell.PATH);
+
         currentBranch.end = true;
         this.forkBranch(branches, currentDirection);
       }
@@ -94,7 +106,7 @@ export default class Robot {
     // mark the robot
     this.replaceCellAt(VIRT_HALF, VIRT_HALF, Cell.ROBOT);
     // mark the gate
-    if (currentResult === Signal.WIN) {
+    if (currentSignal === Signal.WIN) {
       this.replaceCellAt(
         this.virtualCurrentRow,
         this.virtualCurrentCol,
