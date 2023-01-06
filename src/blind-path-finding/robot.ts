@@ -2,6 +2,10 @@ import Branch from "./branch";
 import type Maze from "./maze";
 import Stack from "./stack";
 import { Cell, Direction, Signal } from "./types";
+import {
+  getDirectionDiff,
+  getOppositeDirection,
+} from "/src/blind-path-finding/helpers";
 
 const VIRT_HALF = 100;
 const VIRT_FULL = VIRT_HALF * 2;
@@ -64,15 +68,11 @@ export default class Robot {
       // back-track to the previous branch and terminate the current branch
       if (currentBranch.end) {
         // back-track to the previous branch
-        this.adapterGo(this.getOppositeDirection(currentDirection));
+        this.adapterGo(getOppositeDirection(currentDirection));
 
-        await afterEachGo(
-          this.getOppositeDirection(currentDirection),
-          Cell.CROSS
-        );
+        await afterEachGo(getOppositeDirection(currentDirection), Cell.CROSS);
 
         branches.pop();
-
         continue;
       }
 
@@ -165,7 +165,7 @@ export default class Robot {
           Cell.WALL
         );
         // go back to the original place
-        this.virtualGo(this.getOppositeDirection(direction));
+        this.virtualGo(getOppositeDirection(direction));
       }
     } else {
       // move in virtual map and mark path
@@ -180,42 +180,14 @@ export default class Robot {
     return result;
   }
 
-  private getOppositeDirection(direction: Direction): Direction {
-    switch (direction) {
-      case Direction.UP:
-        return Direction.DOWN;
-      case Direction.DOWN:
-        return Direction.UP;
-      case Direction.LEFT:
-        return Direction.RIGHT;
-      case Direction.RIGHT:
-        return Direction.LEFT;
-    }
-  }
-
   // maze.go() but for virtual map only
   private virtualGo(direction: Direction): string {
     // this method cares about moving the robot, does not matter if it is overriding or not
     let result: string = this.virtualCheck(direction, true);
     if (result === Signal.TRUE) {
-      switch (direction) {
-        case Direction.UP: {
-          this.virtualCurrentRow--;
-          break;
-        }
-        case Direction.DOWN: {
-          this.virtualCurrentRow++;
-          break;
-        }
-        case Direction.LEFT: {
-          this.virtualCurrentCol--;
-          break;
-        }
-        case Direction.RIGHT: {
-          this.virtualCurrentCol++;
-          break;
-        }
-      }
+      const [row, col] = getDirectionDiff(direction);
+      this.virtualCurrentCol += col;
+      this.virtualCurrentRow += row;
     }
     return result;
   }
@@ -226,24 +198,9 @@ export default class Robot {
     let currentRow: number = this.virtualCurrentRow;
     let currentCol: number = this.virtualCurrentCol;
 
-    switch (direction) {
-      case Direction.UP: {
-        currentRow--;
-        break;
-      }
-      case Direction.DOWN: {
-        currentRow++;
-        break;
-      }
-      case Direction.LEFT: {
-        currentCol--;
-        break;
-      }
-      case Direction.RIGHT: {
-        currentCol++;
-        break;
-      }
-    }
+    const [row, col] = getDirectionDiff(direction);
+    currentCol += col;
+    currentRow += row;
 
     switch (this.virtualMap[currentRow][currentCol]) {
       case Cell.WALL: {

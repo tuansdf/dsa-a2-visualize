@@ -1,3 +1,4 @@
+import { getDirectionDiff } from "/src/blind-path-finding/helpers";
 import { Cell, Direction, Signal } from "/src/blind-path-finding/types";
 
 export default class Maze {
@@ -25,15 +26,9 @@ export default class Maze {
     let currentRow = this.robotRow;
     let currentCol = this.robotCol;
 
-    if (direction === Direction.UP) {
-      currentRow--;
-    } else if (direction == Direction.DOWN) {
-      currentRow++;
-    } else if (direction === Direction.LEFT) {
-      currentCol--;
-    } else {
-      currentCol++;
-    }
+    const [row, col] = getDirectionDiff(direction);
+    currentCol += col;
+    currentRow += row;
 
     // check the next position
     if (this.map[currentRow][currentCol] === Cell.GATE) {
