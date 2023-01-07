@@ -10,42 +10,13 @@
   import Button from "/src/components/button.svelte";
   import Map from "/src/components/map.svelte";
   import Select from "/src/components/select.svelte";
+  import {
+    colOptions,
+    paintOptions,
+    rowOptions,
+    timeOptions,
+  } from "/src/utils/constants";
   import { delay } from "/src/utils/delay";
-
-  const rowOptions = [10, 20, 30];
-  const colOptions = [10, 20, 30, 40, 50];
-  const timeOptions = [
-    {
-      label: "Very Fast",
-      value: 1,
-    },
-    {
-      label: "Fast",
-      value: 10,
-    },
-    {
-      label: "Slow",
-      value: 20,
-    },
-    {
-      label: "Very Slow",
-      value: 40,
-    },
-  ];
-  const paintOptions = [
-    {
-      label: "Wall",
-      value: Cell.WALL,
-    },
-    {
-      label: "Gate",
-      value: Cell.GATE,
-    },
-    {
-      label: "Robot",
-      value: Cell.ROBOT,
-    },
-  ];
 
   let wait: number = timeOptions[timeOptions.length - 1].value;
   let mapRows: number = rowOptions[rowOptions.length - 1];
@@ -60,6 +31,7 @@
   let steps: number = 0;
 
   let started: boolean = false;
+  let stopped: boolean = false;
   let errorMessage: string | undefined;
 
   $: createMap(mapRows, mapCols);
@@ -140,12 +112,18 @@
   function start() {
     // reset if started
     if (started) {
+      if (!stopped) {
+        stopped = true;
+        return;
+      }
       started = false;
-      steps = 0;
+      stopped = false;
       removeRobot();
       createMap(mapRows, mapCols);
       return;
     }
+
+    steps = 0;
 
     // no robot on the map
     if (!isRobotExist()) {
@@ -155,6 +133,7 @@
 
     errorMessage = undefined;
     started = true;
+
     const maze = new Maze(map, robotRow, robotCol);
     new Robot(maze).navigate({
       afterEachMove: async (
@@ -162,6 +141,7 @@
         cell: Cell,
         signal: Signal
       ) => {
+        if ((!robotCol && !robotRow) || stopped) return;
         if (signal === Signal.WIN) return;
 
         // when robot backtrack
@@ -180,6 +160,7 @@
         await delay(wait);
       },
       afterEachHit: () => {
+        if ((!robotCol && !robotRow) || stopped) return;
         steps++;
       },
     });
@@ -218,13 +199,12 @@
       />
     </div>
 
-    <div>
-      Steps: {steps}
-    </div>
-    <Button on:click={start}>{started ? "Reset" : "Start"}</Button>
+    <Button on:click={start}
+      >{started ? (stopped ? "Reset" : "Stop") : "Start"}</Button
+    >
     {#if started}
-      <div class="text-red-500">
-        Please refresh the page to reset in the middle of the run
+      <div>
+        Steps: {steps}
       </div>
     {/if}
     {#if errorMessage}
