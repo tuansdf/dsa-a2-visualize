@@ -17,6 +17,7 @@
     timeOptions,
   } from "/src/utils/constants";
   import { delay } from "/src/utils/delay";
+  import { createMap } from "/src/utils/map";
 
   let wait: number = timeOptions[timeOptions.length - 1].value;
   let mapRows: number = rowOptions[rowOptions.length - 1];
@@ -34,7 +35,10 @@
   let stopped: boolean = false;
   let errorMessage: string | undefined;
 
-  $: createMap(mapRows, mapCols);
+  $: {
+    removeRobot();
+    map = createMap(mapRows, mapCols);
+  }
 
   function isRobotExist() {
     return robotCol && robotRow;
@@ -42,27 +46,6 @@
   function removeRobot() {
     robotCol = undefined;
     robotRow = undefined;
-  }
-
-  function createMap(createRows: number, createCols: number) {
-    removeRobot();
-
-    const rows = createRows;
-    const cols = createCols;
-
-    const tmp: Cell[][] = new Array(rows);
-
-    tmp[0] = new Array(cols).fill(Cell.WALL);
-    tmp[rows - 1] = new Array(cols).fill(Cell.WALL);
-
-    for (let i = 1; i < rows - 1; i++) {
-      tmp[i] = new Array(cols).fill(Cell.SPACE);
-
-      tmp[i][0] = Cell.WALL;
-      tmp[i][cols - 1] = Cell.WALL;
-    }
-
-    map = tmp;
   }
 
   function paintMap(row: number, col: number) {
@@ -119,7 +102,7 @@
       started = false;
       stopped = false;
       removeRobot();
-      createMap(mapRows, mapCols);
+      map = createMap(mapRows, mapCols);
       return;
     }
 
