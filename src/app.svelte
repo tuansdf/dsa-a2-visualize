@@ -1,11 +1,7 @@
 <script lang="ts">
-  import {
-    getDirectionDiff,
-    getOppositeDirection,
-  } from "/src/blind-path-finding/helpers";
   import Maze from "/src/blind-path-finding/maze";
   import Robot from "/src/blind-path-finding/robot";
-  import { Cell, Direction, Signal } from "/src/blind-path-finding/types";
+  import { Cell } from "/src/blind-path-finding/types";
 
   import Button from "/src/components/button.svelte";
   import Map from "/src/components/map.svelte";
@@ -16,7 +12,6 @@
     rowOptions,
     timeOptions,
   } from "/src/utils/constants";
-  import { delay } from "/src/utils/delay";
   import { createMap } from "/src/utils/map";
 
   let wait: number = timeOptions[timeOptions.length - 1].value;
@@ -28,7 +23,6 @@
   let robotCol: number | undefined;
 
   let map: Cell[][];
-  let currentDirection: Direction;
   let steps: number = 0;
 
   let started: boolean = false;
@@ -38,6 +32,10 @@
   $: {
     removeRobot();
     map = createMap(mapRows, mapCols);
+  }
+  $: {
+    console.log(wait);
+    robotGo();
   }
 
   function isRobotExist() {
@@ -92,11 +90,15 @@
     map[row][col] = toPaint;
   }
 
+  let interval;
+  let robot;
+  let maze;
   function start() {
     // reset if started
     if (started) {
       if (!stopped) {
         stopped = true;
+        clearInterval(interval);
         return;
       }
       started = false;
@@ -117,36 +119,19 @@
     errorMessage = undefined;
     started = true;
 
-    const maze = new Maze(map, robotRow, robotCol);
-    new Robot(maze).navigate({
-      afterEachMove: async (
-        direction: Direction,
-        cell: Cell,
-        signal: Signal
-      ) => {
-        if ((!robotCol && !robotRow) || stopped) return;
-        if (signal === Signal.WIN) return;
+    maze = new Maze(map, robotRow, robotCol);
+    robot = new Robot(maze);
+    robotGo();
+  }
 
-        // when robot backtrack
-        if (currentDirection === getOppositeDirection(direction)) {
-          map[robotRow][robotCol] = cell;
-        }
+  function robotGo() {
+    if (!robot || !maze) return;
+    interval = setInterval(() => {
+      robot.go();
 
-        currentDirection = direction;
-        const [row, col] = getDirectionDiff(direction);
-        robotCol += col;
-        robotRow += row;
-        if (map[robotRow][robotCol] !== Cell.ROBOT) {
-          map[robotRow][robotCol] = cell;
-        }
-
-        await delay(wait);
-      },
-      afterEachHit: () => {
-        if ((!robotCol && !robotRow) || stopped) return;
-        steps++;
-      },
-    });
+      steps = maze.steps;
+      map = maze.mutMap;
+    }, wait);
   }
 </script>
 

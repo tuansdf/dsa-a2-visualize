@@ -7,23 +7,17 @@ import { Cell, Direction, Signal } from "./types";
 const VIRT_HALF = 100;
 const VIRT_FULL = VIRT_HALF * 2;
 
-interface GoOptions {
-  // every time robot move
-  afterEachMove?: (
-    direction: Direction,
-    cell: Cell,
-    signal?: Signal
-  ) => Promise<void> | void;
-  // move or hit the wall
-  afterEachHit?: () => Promise<void> | void;
-}
-
 export default class Robot {
   private virtualMap: Cell[][];
   private virtualCurrentCol: number;
   private virtualCurrentRow: number;
 
   private maze: Maze;
+
+  private branches: Stack<Branch>;
+  private currentBranch: Branch;
+  private currentDirection: Direction;
+  private currentSignal: Signal;
 
   constructor(maze: Maze) {
     // initialize the virtual map for robot
@@ -45,68 +39,61 @@ export default class Robot {
     );
 
     this.maze = maze;
-  }
 
-  public async navigate(goOptions?: GoOptions) {
-    const branches: Stack<Branch> = new Stack<Branch>();
+    this.branches = new Stack<Branch>();
 
     // register all four directions into the wait-list
-    branches.push(new Branch(Direction.LEFT));
-    branches.push(new Branch(Direction.RIGHT));
-    branches.push(new Branch(Direction.DOWN));
-    branches.push(new Branch(Direction.UP));
+    this.branches.push(new Branch(Direction.LEFT));
+    this.branches.push(new Branch(Direction.RIGHT));
+    this.branches.push(new Branch(Direction.DOWN));
+    this.branches.push(new Branch(Direction.UP));
+  }
 
-    let currentBranch: Branch;
-    let currentDirection: Direction;
-    let currentSignal: Signal;
+  public navigate() {
+    while (this.go()) {}
+  }
 
-    while (currentSignal !== Signal.WIN) {
-      // always get the direction from the top of the stack in every loop
-      currentBranch = branches.peek();
-      if (currentBranch == null) {
-        break;
-      }
-      currentDirection = currentBranch.direction;
-
-      // if the current branch already branched out earlier,
-      // back-track to the previous branch and terminate the current branch
-      if (currentBranch.end) {
-        // back-track to the previous branch
-        const opposite = getOppositeDirection(currentDirection);
-        this.adapterGo(opposite);
-
-        await goOptions?.afterEachMove?.(opposite, Cell.CROSS);
-        await goOptions?.afterEachHit?.();
-
-        branches.pop();
-        continue;
-      }
-
-      // check the next cell and consider own path as obstacle
-      currentSignal = this.virtualCheck(currentDirection, false);
-      // only when the virtual map does not have record of such obstacle,
-      // advance to the next cell
-      if (currentSignal === Signal.TRUE) {
-        currentSignal = this.adapterGo(currentDirection);
-        await goOptions?.afterEachHit?.();
-      }
-
-      // if there is an obstacle, remove that branch
-      if (currentSignal === Signal.FALSE) {
-        branches.pop();
-      }
-      // if there is no obstacle, end that branch
-      else {
-        await goOptions?.afterEachMove?.(
-          currentDirection,
-          Cell.PATH,
-          currentSignal
-        );
-
-        currentBranch.end = true;
-        this.forkBranch(branches, currentDirection);
-      }
+  // only return false when the robot win or out of move
+  public go(): boolean {
+    if (this.currentSignal === Signal.WIN) {
+      return false;
     }
+    // always get the direction from the top of the stack in every loop
+    this.currentBranch = this.branches.peek();
+    if (!this.currentBranch) {
+      return false;
+    }
+
+    this.currentDirection = this.currentBranch.direction;
+    // if the current branch already branched out earlier,
+    // back-track to the previous branch and terminate the current branch
+    if (this.currentBranch.end) {
+      // back-track to the previous branch
+      const opposite = getOppositeDirection(this.currentDirection);
+      this.adapterGo(opposite);
+
+      this.branches.pop();
+      return true;
+    }
+
+    // check the next cell and consider own path as obstacle
+    this.currentSignal = this.virtualCheck(this.currentDirection, false);
+    // only when the virtual map does not have record of such obstacle,
+    // advance to the next cell
+    if (this.currentSignal === Signal.TRUE) {
+      this.currentSignal = this.adapterGo(this.currentDirection);
+    }
+
+    // if there is an obstacle, remove that branch
+    if (this.currentSignal === Signal.FALSE) {
+      this.branches.pop();
+    }
+    // if there is no obstacle, end that branch
+    else {
+      this.currentBranch.end = true;
+      this.forkBranch(this.branches, this.currentDirection);
+    }
+    return true;
   }
 
   // add three new direction except the opposite to the current direction
