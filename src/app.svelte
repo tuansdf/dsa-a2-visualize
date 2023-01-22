@@ -6,17 +6,12 @@
   import Button from "/src/components/button.svelte";
   import Map from "/src/components/map.svelte";
   import Select from "/src/components/select.svelte";
-  import {
-    colOptions,
-    paintOptions,
-    rowOptions,
-    timeOptions,
-  } from "/src/utils/constants";
+  import { paintOptions } from "/src/utils/constants";
   import { createMap } from "/src/utils/map";
 
-  let wait: number = timeOptions[timeOptions.length - 1].value;
-  let mapRows: number = rowOptions[rowOptions.length - 1];
-  let mapCols: number = colOptions[colOptions.length - 1];
+  let wait: number = 100;
+  let mapRows: number = 20;
+  let mapCols: number = 20;
   let paintType: Cell = Cell.WALL;
 
   let robotRow: number | undefined;
@@ -94,7 +89,7 @@
   let maze: Maze;
 
   function robotGo() {
-    if (!robot || !maze) return;
+    if (!robot || !maze || !started) return;
     clearInterval(interval);
     interval = setInterval(() => {
       if (!robot.go()) {
@@ -148,18 +143,38 @@
   <!-- controll board -->
   <div class="flex-none space-y-6 ml-16 w-40">
     <div class="space-y-4">
-      <div class="flex gap-4">
-        <Select
+      <div>
+        <label for="rows">Rows</label>
+        <input
           id="rows"
-          label="Rows"
+          class="w-full"
           bind:value={mapRows}
-          options={rowOptions}
+          type="range"
+          min="5"
+          max="30"
         />
-        <Select
+      </div>
+      <div>
+        <label for="cols">Cols</label>
+        <input
           id="cols"
-          label="Cols"
+          class="w-full"
           bind:value={mapCols}
-          options={colOptions}
+          type="range"
+          min="5"
+          max="40"
+        />
+      </div>
+      <div>
+        <label for="speed">Speed</label>
+        <input
+          id="speed"
+          class="w-full"
+          dir="rtl"
+          bind:value={wait}
+          type="range"
+          min="1"
+          max="200"
         />
       </div>
       <Select
@@ -167,12 +182,6 @@
         label="Paint"
         bind:value={paintType}
         options={paintOptions}
-      />
-      <Select
-        id="speed"
-        label="Speed"
-        bind:value={wait}
-        options={timeOptions}
       />
     </div>
 
