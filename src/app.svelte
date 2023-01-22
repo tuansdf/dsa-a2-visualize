@@ -26,7 +26,7 @@
   let steps: number = 0;
 
   let started: boolean = false;
-  let stopped: boolean = false;
+  let running: boolean = false;
   let errorMessage: string | undefined;
 
   $: {
@@ -34,8 +34,7 @@
     map = createMap(mapRows, mapCols);
   }
   $: {
-    console.log(wait);
-    robotGo();
+    if (wait) robotGo();
   }
 
   function isRobotExist() {
@@ -52,7 +51,7 @@
       row === mapRows - 1 ||
       col === 0 ||
       col === mapCols - 1 ||
-      started
+      running
     ) {
       return;
     }
@@ -90,21 +89,27 @@
     map[row][col] = toPaint;
   }
 
-  let interval;
-  let robot;
-  let maze;
-  function start() {
-    // reset if started
-    if (started) {
-      if (!stopped) {
-        stopped = true;
-        clearInterval(interval);
-        return;
+  let interval: number;
+  let robot: Robot;
+  let maze: Maze;
+
+  function robotGo() {
+    if (!robot || !maze) return;
+    clearInterval(interval);
+    interval = setInterval(() => {
+      if (!robot.go()) {
+        running = false;
       }
-      started = false;
-      stopped = false;
-      removeRobot();
-      map = createMap(mapRows, mapCols);
+
+      steps = maze.steps;
+      map = maze.mutMap;
+    }, wait);
+  }
+  function startRun() {
+    if (running) return;
+    if (started) {
+      robotGo();
+      running = true;
       return;
     }
 
@@ -118,20 +123,24 @@
 
     errorMessage = undefined;
     started = true;
+    running = true;
 
     maze = new Maze(map, robotRow, robotCol);
     robot = new Robot(maze);
     robotGo();
   }
-
-  function robotGo() {
-    if (!robot || !maze) return;
-    interval = setInterval(() => {
-      robot.go();
-
-      steps = maze.steps;
-      map = maze.mutMap;
-    }, wait);
+  function stopRun() {
+    running = false;
+    clearInterval(interval);
+    return;
+  }
+  function resetRun() {
+    running = false;
+    started = false;
+    steps = 0;
+    removeRobot();
+    map = createMap(mapRows, mapCols);
+    clearInterval(interval);
   }
 </script>
 
@@ -167,10 +176,11 @@
       />
     </div>
 
-    <Button on:click={start}
-      >{started ? (stopped ? "Reset" : "Stop") : "Start"}</Button
+    <Button on:click={() => (running ? stopRun() : startRun())}
+      >{running ? "Stop" : "Start"}</Button
     >
-    {#if started}
+    <Button on:click={resetRun}>Reset</Button>
+    {#if running}
       <div>
         Steps: {steps}
       </div>
